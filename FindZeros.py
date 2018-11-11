@@ -1,7 +1,7 @@
 import tkinter as tk
 import tkinter.scrolledtext as tkst
 import math
-import cmath
+from cmath import log10, log, pi, e, sin, cos, tan, acos, asin, atan, sinh, cosh, tanh, asinh, acosh, atanh, exp
 from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg
 from matplotlib.figure import Figure
 
@@ -67,11 +67,11 @@ class Application(tk.Frame):
         self.output_area.grid(row=0,column=3, rowspan=5, padx=[0,20])
         self.output_area.insert(tk.INSERT,"(-0.38-0.59j)\n0j\n(-0.38+0.59j)\n(0.66+0j)\n(0.06+1.74j)\n(0.06-1.74j)")
         
-        f = Figure(figsize=(5,5), dpi=70)
-        fig = f.add_subplot(111)
+        fig1 = Figure(figsize=(5,5), dpi=70)
+        fig = fig1.add_subplot(111)
         fig.scatter([-0.38,0,-0.38,0.66,0.06,0.06],[0.59,0,-0.59,0,1.74,-1.74])
 
-        self.canvas = FigureCanvasTkAgg(f,self)
+        self.canvas = FigureCanvasTkAgg(fig1,self)
         self.canvas.draw()
         self.canvas.get_tk_widget().grid(row=6, columnspan=4, pady=[0,40])
         
@@ -102,15 +102,18 @@ class Application(tk.Frame):
             self.error_text["text"] = "Imaginary Min Bound not a number"
             return
         if(a>=b):
-            self.error_text["text"] = "Real Bound incorrect"
+            self.error_text["text"] = "Real Bound not valid"
             return
         if(c>=d):
-            self.error_text["text"] = "Imaginary Bound incorrect"
+            self.error_text["text"] = "Imaginary Bound not valid"
             return
         area=[a,b,c,d]
 
         userInput=self.entry_box.get()
         if('_' in userInput):
+            self.error_text["text"] = "Not Valid Function"
+            return
+        if('import' in userInput):
             self.error_text["text"] = "Not Valid Function"
             return
         else:
@@ -122,10 +125,14 @@ class Application(tk.Frame):
             except:
                 self.error_text["text"] = "Not Valid Function"
                 return
-            
-        self.error_text["text"] = ""
 
         Z=RegionLoop(tol,area)
+        if(isinstance(Z,str)):
+            self.error_text["text"] = Z
+            return
+        else:
+            self.error_text["text"] = ""
+        
         Z_=set()
         for n in range(0,len(Z)-1,4):
             x=complex((Z[n]+Z[n+1])/2,(Z[n+2]+Z[n+3])/2);
@@ -146,11 +153,11 @@ class Application(tk.Frame):
             x.append(z.real);
             y.append(z.imag);
         
-        f = Figure(figsize=(5,5), dpi=70)
-        fig = f.add_subplot(111)
+        fig1 = Figure(figsize=(5,5), dpi=70)
+        fig = fig1.add_subplot(111)
         fig.scatter(x,y)
 
-        canvas = FigureCanvasTkAgg(f,self)
+        canvas = FigureCanvasTkAgg(fig1,self)
         canvas.draw()
         canvas.get_tk_widget().grid(row=6, columnspan=4, pady=[0,40])
         
@@ -159,16 +166,14 @@ def f(x):   #returns "zero" is f(x)=0 else returns f'(x)/f(x)
     try:
         func_x=complex(eval(userFunction))
         if(func_x==0):
-            return "zero"
+            return ("Zero at "+str(x))
         else:
             h=10**-8
             x+=h
             func_xh=complex(eval(userFunction))
             return (func_xh-func_x)/(h*func_x)
     except:
-        print("Error in function at point x=",x)
-        #error TODO
-        return
+        return ("Error in function at "+str(x))
 
 def RegionLoop(tol,area):
     maxIt=10;
@@ -180,13 +185,14 @@ def RegionLoop(tol,area):
         area[0:4]=[]
         for m in range(1,maxIt):
             if(CornorsGood(region)==1):
-                num=ComplexRound(ContourIntegral(region,tol)/(2*math.pi*1J));
+                num=ComplexRound(ContourIntegral(region,tol)/(2*pi*1J));
+                if(isinstance(num,str)):
+                    return num
                 if(num.imag==0):
                     break
             region=ScaleRegion(region)
         else:
-            print("scaled region by ~10% and still errored, function to messy")
-            #error TODO
+            return "Scaled region by ~10% and still errored, function to messy"
         if(num.real>0):
             a=region[0]
             b=region[1]
@@ -202,8 +208,7 @@ def RegionLoop(tol,area):
         if(len(area)==0):
             break
     else:
-        print("looped too many times, tol to small for area")
-        #error
+        return "Looped too many times, tol to small for area"
     return Z
 
 def ComplexRound(x):
@@ -217,11 +222,11 @@ def RoundSigFig(Z):
     if(Z.real==0):
         x=0
     else:
-        x=round(Z.real,-(math.floor(cmath.log10(Z.real).real)-s))
+        x=round(Z.real,-(math.floor(log10(Z.real).real)-s))
     if(Z.imag==0):
         y=0
     else:
-        y=round(Z.imag,-(math.floor(cmath.log10(Z.imag).real)-s))
+        y=round(Z.imag,-(math.floor(log10(Z.imag).real)-s))
     return complex(x,y) 
 
 def ScaleRegion(area):
@@ -246,22 +251,46 @@ def ContourIntegral(area,tol):
     c=area[2]
     d=area[3]
 
-    #new functions of g after parametization
+    #new functions of f after parametization
     def f1(t):
-        return f(a+(b-a)*t+c*1J)*(b-a)
+        y=f(a+(b-a)*t+c*1J)
+        if(isinstance(y,str)):
+            return y;
+        else:
+            return y*(b-a)
     def f2(t):
-        return f(b+1J*((d-c)*t+c))*(d-c);
+        y=f(b+1J*((d-c)*t+c));
+        if(isinstance(y,str)):
+            return y;
+        else:
+            return y*(d-c)
     def f3(t):
-        return f(b+(a-b)*t+d*1J)*(a-b);
+        y=f(b+(a-b)*t+d*1J);
+        if(isinstance(y,str)):
+            return y;
+        else:
+            return y*(a-b)
     def f4(t):
-        return f(a+1J*((c-d)*t+d))*(c-d);
+        y=f(a+1J*((c-d)*t+d));
+        if(isinstance(y,str)):
+            return y;
+        else:
+            return y*(c-d)
 
     #numerically integrates those functions
     y1=AdaptiveIntegral(f1);
+    if(isinstance(y1,str)):
+        return y1
     y2=1J*AdaptiveIntegral(f2);
+    if(isinstance(y2,str)):
+        return y2
     y3=AdaptiveIntegral(f3);
+    if(isinstance(y3,str)):
+        return y3
     y4=1J*AdaptiveIntegral(f4);
-
+    if(isinstance(y4,str)):
+        return y4
+    
     return y1+y2+y3+y4;
     
 
@@ -277,15 +306,40 @@ def AdaptiveIntegral(g):
 
     for n in range(0,Nmax):
         #RK4
-        y1=x[n]+(g(t[n])+4*g(t[n]+h/2)+g(t[n]+h))*h/6;
-        y2=x[n]+(g(t[n])+4*g(t[n]+h/4)+2*g(t[n]+h/2)+4*g(t[n]+3*h/4)+g(t[n]+h))*h/12;
+        g0=g(t[n])
+        if(isinstance(g0,str)):
+            return g0;
+        g1=g(t[n]+h/4)
+        if(isinstance(g1,str)):
+            return g1;
+        g2=g(t[n]+h/2)
+        if(isinstance(g2,str)):
+            return g2;
+        g3=g(t[n]+3*h/4)
+        if(isinstance(g3,str)):
+            return g3;
+        g4=g(t[n]+h)
+        if(isinstance(g4,str)):
+            return g4;
+        
+        y1=x[n]+(g0+4*g2+g4)*h/6;
+        y2=x[n]+(g0+4*g1+2*g2+4*g3+g4)*h/12;
         if(abs(y2-y1)>tol): #if RK4 unsuccessful
             h=h*abs(tol/(y2-y1))**0.2
             if(h<h_min):
                 h=h_min
             if(h>h_max):
                 h=h_max
-            x[n+1]=x[n]+(g(t[n])+4*g(t[n]+h/2)+g(t[n]+h))*h/6
+            g0=g(t[n])
+            if(isinstance(g0,str)):
+                return g0;
+            g2=g(t[n]+h/2)
+            if(isinstance(g2,str)):
+                return g2;
+            g4=g(t[n]+h)
+            if(isinstance(g4,str)):
+                return g4;
+            x[n+1]=x[n]+(g0+4*g2+g4)*h/6
             t[n+1]=t[n]+h
         else:   #if RK4 successful
             x[n+1]=y2
@@ -302,7 +356,7 @@ def AdaptiveIntegral(g):
             break
     if(t[n+1]<1):
         print(tol)
-        return "error"
+        return "Badly behaved function"
     else:
         return x[n]+(1-t[n])/(t[n+1]-t[n])*(x[n+1]-x[n]);
 
