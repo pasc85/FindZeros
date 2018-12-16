@@ -1,11 +1,11 @@
 import tkinter as tk
 import tkinter.scrolledtext as tkst
 import math
-from cmath import log10, log, pi, e, sin, cos, tan, acos, asin, atan, sinh, cosh, tanh, asinh, acosh, atanh, exp
+from cmath import log10, log, pi, e, sin, cos, tan, acos, asin, atan, sinh, cosh, tanh, asinh, acosh, atanh, exp, sqrt
 from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg
 from matplotlib.figure import Figure
 
-userFuction=''
+userFunction=''
 
 class Application(tk.Frame):
     def __init__(self, master=None):
@@ -110,22 +110,13 @@ class Application(tk.Frame):
         area=[a,b,c,d]
 
         userInput=self.entry_box.get()
-        if('_' in userInput):
-            self.error_text["text"] = "Not Valid Function"
-            return
-        if('import' in userInput):
-            self.error_text["text"] = "Not Valid Function"
-            return
+        if(ValidateInput(userInput,area)):
+            global userFunction
+            userFunction=userInput
         else:
-            x=(a+b)/2+(c+d)/2*1J
-            try:
-                complex(eval(userInput))
-                global userFunction
-                userFunction=userInput
-            except:
-                self.error_text["text"] = "Not Valid Function"
-                return
-
+            self.error_text["text"] = "Not Valid Function"
+            return
+            
         Z=RegionLoop(tol,area)
         if(isinstance(Z,str)):
             self.error_text["text"] = Z
@@ -161,6 +152,38 @@ class Application(tk.Frame):
         canvas.draw()
         canvas.get_tk_widget().grid(row=6, columnspan=4, pady=[0,40])
         
+def ValidateInput(userInput,area):
+    a=area[0];
+    b=area[1];
+    c=area[2];
+    d=area[3];
+    if(userInput=="0"):
+        return 0    
+    if('_' in userInput):
+        return 0
+    if('import' in userInput):
+        return 0
+    x=a+c*1J
+    try:
+        complex(eval(userInput))
+    except:
+        return 0
+    x=a+d*1J
+    try:
+        complex(eval(userInput))
+    except:
+        return 0
+    x=b+c*1J
+    try:
+        complex(eval(userInput))
+    except:
+        return 0
+    x=b+d*1J
+    try:
+        complex(eval(userInput))
+    except:
+        return 0
+    return 1
 
 def f(x):   #returns "zero" is f(x)=0 else returns f'(x)/f(x)
     try:
@@ -168,7 +191,7 @@ def f(x):   #returns "zero" is f(x)=0 else returns f'(x)/f(x)
         if(func_x==0):
             return ("Zero at "+str(x))
         else:
-            h=10**-8
+            h=1e-8
             x+=h
             func_xh=complex(eval(userFunction))
             return (func_xh-func_x)/(h*func_x)
@@ -185,14 +208,14 @@ def RegionLoop(tol,area):
         area[0:4]=[]
         for m in range(1,maxIt):
             if(CornorsGood(region)==1):
-                num=ComplexRound(ContourIntegral(region,tol)/(2*pi*1J));
+                num=ComplexRound(ContourIntegral(region,tol)/(pi*1J));
                 if(isinstance(num,str)):
                     return num
                 if(num.imag==0):
                     break
             region=ScaleRegion(region)
         else:
-            return "Scaled region by ~10% and still errored, function to messy"
+            return "Scaled region by ~10% and still errored"
         if(num.real>0):
             a=region[0]
             b=region[1]
@@ -208,7 +231,7 @@ def RegionLoop(tol,area):
         if(len(area)==0):
             break
     else:
-        return "Looped too many times, tol to small for area"
+        return "Looped too many times, tol too small for area"
     return Z
 
 def ComplexRound(x):
@@ -299,7 +322,7 @@ def AdaptiveIntegral(g):
     h_min=1e-10
     h_max=1
     
-    tol=0.01;
+    tol=0.001;
     h=tol
     t=[0]*(Nmax+1)
     x=[0]*(Nmax+1)
